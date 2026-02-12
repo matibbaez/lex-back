@@ -22,6 +22,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.985.0",
     "@aws-sdk/s3-request-presigner": "^3.985.0",
+    "@nestjs/cli": "^11.0.16",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -30,6 +31,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.1.1",
+    "@nestjs/schematics": "^11.0.0",
     "@nestjs/typeorm": "^11.0.0",
     "@types/pdfkit": "^0.17.4",
     "bcrypt": "^6.0.0",
@@ -45,12 +47,10 @@
     "reflect-metadata": "^0.2.2",
     "resend": "^6.5.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.27",
-    "@nestjs/cli": "^11.0.16",
-    "@nestjs/schematics": "^11.0.0",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "typeorm": "^0.3.27",
     "typescript": "^5.7.3"
   },
   "devDependencies": {
@@ -58,7 +58,7 @@
     "@eslint/js": "^9.18.0",
     "@nestjs/testing": "^11.0.1",
     "@types/bcrypt": "^6.0.0",
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.10.7",
