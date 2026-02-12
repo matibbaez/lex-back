@@ -10,8 +10,7 @@ import { json, urlencoded } from 'express';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // 1. PREFIJO GLOBAL (Opcional pero recomendado para producción)
-  // Ahora tus rutas serán: https://tu-api.onrender.com/api/causas
+  // 1. PREFIJO GLOBAL
   app.setGlobalPrefix('api');
 
   // 2. LÍMITES DE SUBIDA
@@ -23,14 +22,15 @@ async function bootstrap() {
     crossOriginResourcePolicy: { policy: "cross-origin" }
   })); 
   
-  // 4. CORS DINÁMICO (Crucial para el deploy)
-  // Usamos la variable de entorno FRONTEND_URL que pondremos en Render
+  // 4. CORS (FIX DEFINITIVO)
   app.enableCors({
     origin: [
       'http://localhost:5173', 
-      process.env.FRONTEND_URL // <-- Acá Render inyectará la URL de Vercel
+      'https://lex-front-lemon.vercel.app', // <--- PUESTA A FUEGO (Sin barra al final)
+      process.env.FRONTEND_URL // Por si algún día la ponés en Render
     ].filter(Boolean) as string[], 
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    // AGREGUÉ 'OPTIONS' ACÁ ABAJO, ES CRUCIAL PARA EL PREFLIGHT:
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   }); 
 
@@ -41,62 +41,46 @@ async function bootstrap() {
     transform: true
   }));
 
-  // --- SEED DE USUARIOS (VisionPath Automation) ---
-  const dataSource = app.get(DataSource);
-  const userRepo = dataSource.getRepository(User);
+  // --- SEED DE USUARIOS ---
+  try {
+    const dataSource = app.get(DataSource);
+    const userRepo = dataSource.getRepository(User);
 
-  // Definimos el staff del estudio
-  const staff = [
-    { 
-      nombre: 'Admin Estudio', 
-      email: 'admin@estudio.com', 
-      role: UserRole.ADMIN,
-      pass: 'PasswordSeguro123!' 
-    },
-    { 
-      nombre: 'Mariana', 
-      email: 'mariana@estudio.com', 
-      role: UserRole.PRODUCTOR, 
-      pass: 'estudio2026'
-    },
-    { 
-      nombre: 'Socia', 
-      email: 'socia@estudio.com', 
-      role: UserRole.PRODUCTOR, 
-      pass: 'estudio2026'
+    const staff = [
+      { nombre: 'Admin Estudio', email: 'admin@estudio.com', role: UserRole.ADMIN, pass: 'PasswordSeguro123!' },
+      { nombre: 'Mariana', email: 'mariana@estudio.com', role: UserRole.PRODUCTOR, pass: 'estudio2026'},
+      { nombre: 'Socia', email: 'socia@estudio.com', role: UserRole.PRODUCTOR, pass: 'estudio2026'}
+    ];
+
+    console.log('🔄 Sincronizando usuarios...');
+
+    for (const person of staff) {
+      // Usamos try-catch por si la tabla no está lista aún en el primer deploy
+      try {
+        let user = await userRepo.findOne({ where: { email: person.email } });
+        const hashedPass = await bcrypt.hash(person.pass, 10);
+
+        if (!user) {
+          user = userRepo.create({
+            nombre: person.nombre, email: person.email, password: hashedPass, role: person.role,
+            dni: '00000000', telefono: '0000000000', isApproved: true
+          });
+          await userRepo.save(user);
+          console.log(`✅ Usuario creado: ${person.nombre}`);
+        } else {
+          user.password = hashedPass;
+          user.isApproved = true;
+          await userRepo.save(user);
+        }
+      } catch (e) {
+        console.warn(`⚠️ Error procesando usuario ${person.nombre} (ignorable si es primer deploy):`, e.message);
+      }
     }
-  ];
-
-  console.log('🔄 Sincronizando usuarios del estudio...');
-
-  for (const person of staff) {
-    let user = await userRepo.findOne({ where: { email: person.email } });
-    const hashedPass = await bcrypt.hash(person.pass, 10);
-
-    if (!user) {
-      user = userRepo.create({
-        nombre: person.nombre,
-        email: person.email,
-        password: hashedPass,
-        role: person.role,
-        dni: '00000000',
-        telefono: '0000000000',
-        isApproved: true
-      });
-      await userRepo.save(user);
-      console.log(`✅ Usuario creado: ${person.nombre} (${person.role})`);
-    } else {
-      // Actualizamos password por si la cambiaste en el código
-      user.password = hashedPass;
-      user.isApproved = true;
-      await userRepo.save(user);
-    }
+  } catch (error) {
+    console.error("⚠️ Error general en seed (ignorable):", error);
   }
-  
-  console.log('🚀 Base de datos de usuarios lista.');
   // ----------------------------------
 
-  // 6. PUERTO DINÁMICO PARA RENDER
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
   
